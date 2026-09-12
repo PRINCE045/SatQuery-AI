@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from agent.executor import ToolExecutor
 from agent.query_engine import QueryEngine
 from agent.tool_registry import ToolRegistry
 
@@ -14,6 +15,7 @@ app = FastAPI(
 
 query_engine = QueryEngine()
 tool_registry = ToolRegistry()
+tool_executor = ToolExecutor(tool_registry)
 
 class QueryRequest(BaseModel):
     query: str
@@ -69,4 +71,17 @@ def list_tools():
             }
             for tool in tools
         ],
+    }
+
+
+@app.post("/api/tools/{tool_name}/execute")
+def execute_tool(tool_name: str, inputs: dict):
+    result = tool_executor.execute(tool_name, inputs)
+
+    return {
+        "tool_name": result.tool_name,
+        "status": result.status,
+        "message": result.message,
+        "outputs": result.outputs,
+        "evidence": result.evidence,
     }
