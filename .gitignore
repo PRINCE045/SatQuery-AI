@@ -7,3 +7,10 @@ data/processed/
 node_modules/
 dist/
 .next/
+
+.pytest_cache/
+
+frontend/node_modules/
+
+data/uploads/
+data/raster_previews/

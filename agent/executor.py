@@ -15,10 +15,7 @@ class ExecutionResult:
 
 class ToolExecutor:
     """
-    Executes tools selected by the SatQuery agent.
-
-    At this stage, specialist models are represented by controlled
-    development executors. Real AI models will be connected later.
+    Executes specialists selected by the SatQuery agent.
     """
 
     def __init__(self, registry: ToolRegistry):
@@ -57,13 +54,45 @@ class ToolExecutor:
             )
 
         if tool.execute is not None:
-            result = tool.execute(inputs)
-            return ExecutionResult(
-                tool_name=tool_name,
-                status="success",
-                message="Tool executed successfully.",
-                outputs=result,
-            )
+            try:
+                result = tool.execute(inputs)
+
+                if not isinstance(result, dict):
+                    result = {
+                        "status": "error",
+                        "message": (
+                            "Specialist returned an invalid result type."
+                        ),
+                    }
+
+                status = result.get("status", "success")
+
+                message = result.get(
+                    "message",
+                    "Tool executed successfully."
+                    if status == "success"
+                    else "Tool execution completed.",
+                )
+
+                evidence = result.get("evidence", [])
+
+                return ExecutionResult(
+                    tool_name=tool_name,
+                    status=status,
+                    message=message,
+                    outputs=result,
+                    evidence=evidence,
+                )
+
+            except Exception as exc:
+                return ExecutionResult(
+                    tool_name=tool_name,
+                    status="error",
+                    message=f"Tool execution failed: {exc}",
+                    outputs={
+                        "exception_type": type(exc).__name__,
+                    },
+                )
 
         return self._development_executor(tool, inputs)
 
@@ -77,8 +106,8 @@ class ToolExecutor:
             tool_name=tool.name,
             status="ready",
             message=(
-                f"Tool '{tool.name}' passed input validation. "
-                "Specialist model execution will be connected in the model integration phase."
+                f"Tool '{tool.name}' passed input validation, "
+                "but its specialist runtime is not connected."
             ),
             outputs={
                 "model": tool.model_name,
